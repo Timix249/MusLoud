@@ -2,8 +2,20 @@ let format='mp3',mode='search',source='youtube',selected=null,searchController=n
 const status=document.querySelector('#status');
 const download=document.querySelector('#download');
 const result=document.querySelector('#searchResult');
+const alternative=document.querySelector('#alternative');
+let alternativeQuery='',alternativeSource='soundcloud';
+async function apiError(response){
+ let data;try{data=await response.json();}catch{return Error('Der Server antwortet nicht korrekt (HTTP '+response.status+'). Bitte später erneut versuchen.');}
+ const error=Error((data.error||'Die Anfrage ist fehlgeschlagen.')+(data.code?' ['+data.code+']':''));
+ error.canTryAlternative=Boolean(data.canTryAlternative);return error;
+}
+alternative.onclick=()=>{
+ document.querySelector('.source[data-source="'+alternativeSource+'"]').click();
+ document.querySelector('#query').value=alternativeQuery;
+ document.querySelector('#searchForm').requestSubmit();
+};
 function setMode(next){
- mode=next;
+ mode=next;alternative.hidden=true;
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
  document.querySelector('#searchForm').hidden=mode!=='search';
  document.querySelector('#uploadForm').hidden=mode!=='upload';
@@ -13,7 +25,7 @@ function setMode(next){
 }
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 document.querySelectorAll('.source').forEach(b=>b.onclick=()=>{
- source=b.dataset.source;searchController?.abort();selected=null;result.replaceChildren();result.hidden=true;
+ source=b.dataset.source;alternative.hidden=true;searchController?.abort();selected=null;result.replaceChildren();result.hidden=true;
  document.querySelectorAll('.source').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});
  status.textContent='Suche auf '+(source==='youtube'?'YouTube':'SoundCloud')+'.';
 });
@@ -39,11 +51,11 @@ function showTracks(tracks){
  });result.append(group);
 }
 document.querySelector('#searchForm').onsubmit=async e=>{
- e.preventDefault();const query=document.querySelector('#query').value.trim();if(!query)return;
+ e.preventDefault();alternative.hidden=true;const query=document.querySelector('#query').value.trim();if(!query)return;
  searchController?.abort();const controller=new AbortController();searchController=controller;
  const button=document.querySelector('.go');button.disabled=true;selected=null;result.replaceChildren();result.hidden=true;status.textContent='◌ Suche läuft …';
  try{
-  const response=await fetch('/api/search?'+new URLSearchParams({q:query,source}),{signal:controller.signal});const data=await response.json();if(!response.ok)throw Error(data.error);
+  const response=await fetch('/api/search?'+new URLSearchParams({q:query,source}),{signal:controller.signal});if(!response.ok)throw await apiError(response);const data=await response.json();
   showTracks(data.tracks);status.textContent=data.tracks.length?'Wähle einen Treffer aus.':'Keine Treffer gefunden.';
  }catch(e){if(e.name!=='AbortError')status.textContent=e.message||'Die Suche ist fehlgeschlagen.';}
  finally{if(searchController===controller){button.disabled=false;searchController=null;}}
@@ -58,10 +70,19 @@ download.onclick=async()=>{
   if(!selected){status.textContent='Bitte zuerst suchen und einen Track auswählen.';document.querySelector('#query').focus();return;}
   body=JSON.stringify({token:selected.token,format});headers={'Content-Type':'application/json'};endpoint='/api/download';name=selected.title;
  }
+ alternative.hidden=true;
+ const failedSelection=selected;
  const outputFormat=format;download.disabled=true;download.textContent='◌ DOWNLOAD WIRD VORBEREITET …';status.textContent='Dein Track wird geladen und konvertiert. Das kann etwas dauern.';
  try{
-  const response=await fetch(endpoint,{method:'POST',headers,body});if(!response.ok){const error=await response.json();throw Error(error.error);}
+  const response=await fetch(endpoint,{method:'POST',headers,body});if(!response.ok)throw await apiError(response);
   const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(name.replace(/[\\/:*?"<>|]/g,'').slice(0,100)||'MusLoud')+'.'+outputFormat;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);status.textContent='✓ Fertig! Dein Download wurde gestartet.';
- }catch(e){status.textContent=e.message||'Download fehlgeschlagen. Bitte erneut versuchen.';}
+ }catch(e){
+  status.textContent=e.message||'Download fehlgeschlagen. Bitte erneut versuchen.';
+  if(e.canTryAlternative&&endpoint==='/api/download'&&failedSelection){
+   alternativeQuery=[failedSelection.artist,failedSelection.title].filter(Boolean).join(' ');
+   alternativeSource=failedSelection.source==='YouTube'?'soundcloud':'youtube';
+   alternative.textContent='Auf '+(alternativeSource==='soundcloud'?'SoundCloud':'YouTube')+' suchen →';alternative.hidden=false;
+  }
+ }
  finally{download.disabled=false;download.textContent=mode==='upload'?'↓ DATEI KONVERTIEREN':'↓ TRACK HERUNTERLADEN';}
 };

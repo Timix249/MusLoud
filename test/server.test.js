@@ -10,10 +10,11 @@ test('HTTP search, signed selection, real four-format conversion, and failures',
  const fixture=join(dir,'fixture.wav');
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=1',fixture]);
  const stub=join(dir,'downloader');
- await writeFile(stub,`#!${process.execPath}\nimport {copyFileSync} from 'node:fs';\nconst args=process.argv.slice(2);\nif(args.includes('--dump-single-json'))console.log(JSON.stringify({title:'Test track',uploader:'Fixture',duration:1,webpage_url:'https://www.youtube.com/watch?v=abcdefghijk'}));\nelse{const p=args[args.indexOf('--output')+1].replace('%(ext)s','wav');copyFileSync(process.env.TEST_AUDIO,p);}\n`,{mode:0o755});
+ await writeFile(stub,`#!${process.execPath}\nimport {copyFileSync,existsSync} from 'node:fs';\nconst args=process.argv.slice(2);\nif(existsSync(process.env.TEST_FAILURE_FILE)){console.error('ERROR: Sign in to confirm you are not a bot https://example.com/?token=never-expose');process.exit(1);}\nif(args.includes('--dump-single-json'))console.log(JSON.stringify({title:'Test track',uploader:'Fixture',duration:1,webpage_url:'https://www.youtube.com/watch?v=abcdefghijk'}));\nelse{const p=args[args.indexOf('--output')+1].replace('%(ext)s','wav');copyFileSync(process.env.TEST_AUDIO,p);}\n`,{mode:0o755});
  // Standalone executable uses .mjs syntax through Node's module detection.
  const socket=createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));
- const server=spawn(process.execPath,['server.js'],{env:{...process.env,PORT:String(port),YTDLP_PATH:stub,TEST_AUDIO:fixture},stdio:['ignore','pipe','pipe']});
+ const server=spawn(process.execPath,['server.js'],{env:{...process.env,PORT:String(port),YTDLP_PATH:stub,TEST_AUDIO:fixture,TEST_FAILURE_FILE:join(dir,'fail')},stdio:['ignore','pipe','pipe']});
+ let logs='';server.stderr.on('data',chunk=>logs+=chunk);
  try{
   await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',()=>reject(Error('Server exited')));});
   const base=`http://127.0.0.1:${port}`;
@@ -30,6 +31,13 @@ test('HTTP search, signed selection, real four-format conversion, and failures',
    const output=join(dir,'result.'+format);await writeFile(output,Buffer.from(await r.arrayBuffer()));
    const probe=JSON.parse(execFileSync('ffprobe',['-v','error','-show_entries','stream=codec_name','-of','json',output]));assert.equal(probe.streams[0].codec_name,codec);
   }
+  await writeFile(join(dir,'fail'),'1');
+  r=await post({token:tracks[0].token,format:'mp3'});assert.equal(r.status,502);
+  const failure=await r.json();assert.equal(failure.code,'BOT_CHECK');assert.equal(failure.canTryAlternative,true);assert.match(failure.requestId,/^[a-f0-9-]{36}$/);
+  assert.doesNotMatch(JSON.stringify(failure),/never-expose/);
+  await rm(join(dir,'fail'));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.match(logs, /"code":"BOT_CHECK"/);assert.doesNotMatch(logs,/never-expose/);
   const invalid=new FormData();invalid.append('audio',new Blob(['not audio']),'bad.wav');invalid.append('format','mp3');
   assert.equal((await fetch(base+'/api/convert',{method:'POST',body:invalid})).status,422);
  }finally{server.kill();await new Promise(r=>server.exitCode!==null?r():server.once('exit',r));await rm(dir,{recursive:true,force:true});}

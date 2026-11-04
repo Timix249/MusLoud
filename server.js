@@ -1,10 +1,11 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import multer from 'multer';
 import { mkdtemp, rm, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
-import { formats, searchTarget, trackUrl, issueToken, readToken, ytdlp, run, sourceError } from './media.js';
+import { formats, searchTarget, trackUrl, issueToken, readToken, ytdlp, run, sourceFailure } from './media.js';
 const app = express();
 app.use(express.json({limit:'8kb'}));
 let activeSearches=0, activeConversions=0;
@@ -16,7 +17,13 @@ function conversionSlot(req,res,next){
 const upload = multer({dest: tmpdir(), limits:{fileSize:80*1024*1024,files:1}});
 app.disable('x-powered-by');
 app.use(express.static('public'));
-app.get('/api/health', (_,res)=>res.json({status:'ok'}));
+const revision=/^[a-f0-9]{7,40}$/.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT.slice(0,7):'local';
+app.get('/api/health', (_,res)=>res.json({status:'ok',revision}));
+function reportSourceFailure(res,error,operation){
+ const failure=sourceFailure(error);const requestId=randomUUID();
+ console.error(JSON.stringify({event:'media_failure',operation,code:failure.code,requestId,revision}));
+ if(!res.headersSent&&!res.destroyed)res.status(502).json({...failure,requestId});
+}
 app.post('/api/convert', conversionSlot, upload.single('audio'), async(req,res)=>{
  const format=req.body.format;
  if(!req.file) return res.status(400).json({error:'Bitte eine Audiodatei auswählen.'});
@@ -53,7 +60,7 @@ app.get('/api/search', async(req,res)=>{
    }catch{return [];}
   });
   res.json({tracks});
- }catch(e){if(!res.destroyed)res.status(502).json({error:sourceError(e)});}
+ }catch(e){reportSourceFailure(res,e,'search');}
  finally{activeSearches--;}
 });
 app.post('/api/download',conversionSlot,async(req,res)=>{
@@ -79,7 +86,7 @@ app.post('/api/download',conversionSlot,async(req,res)=>{
   if((await stat(output)).size>=220000000)throw Error('Die Ausgabedatei ist zu groß. Bitte MP3 oder OGG wählen.');
   const name=String(meta.title||'MusLoud').replace(/[^\p{L}\p{N} _-]/gu,'').trim().slice(0,100)||'MusLoud';
   await new Promise(resolve=>res.download(output,`${name}.${format}`,()=>resolve()));
- }catch(e){if(!res.headersSent&&!res.destroyed)res.status(422).json({error:sourceError(e)});}
+ }catch(e){reportSourceFailure(res,e,'download');}
  finally{if(dir)await rm(dir,{recursive:true,force:true});}
 });
 app.use((err,req,res,next)=>res.status(400).json({error:err.code==='LIMIT_FILE_SIZE'?'Die Datei darf maximal 80 MB groß sein.':'Upload fehlgeschlagen.'}));

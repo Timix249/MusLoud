@@ -28,3 +28,7 @@ YTDLP_PATH=/workspace/musloud-tools/bin/yt-dlp npm start
 ## Tests
 
 `npm test` prüft URL-Validierung, signierte Auswahlen, Fehlertexte und den HTTP-Ablauf. Der Integrationstest ersetzt ausschließlich den externen Downloader durch eine lokale Fixture; FFmpeg verarbeitet echte Audiodaten und alle vier Ausgabe-Codecs werden mit ffprobe geprüft. Diese Tests bestätigen keine Verfügbarkeit der externen Plattformen. Dafür auf dem Zielserver je einen bekannten erlaubten Track suchen und herunterladen.
+
+## Fehler auf Render untersuchen
+
+Die Oberfläche zeigt für Plattformfehler einen Code (z. B. `BOT_CHECK`, `SOURCE_FORBIDDEN`, `LOGIN_REQUIRED`, `EXTRACTOR_FAILED`). In den Render-Logs steht dazu ein JSON-Eintrag mit `event: media_failure`, Vorgang, Code, Request-ID und Revision; private Extractor-Ausgaben oder Media-URLs werden nicht protokolliert. `/api/health` zeigt die laufende Render-Commit-Revision. Bei einem Plattformfehler kann der Nutzer ausdrücklich eine neue Suche auf der anderen Plattform starten und dort einen Treffer auswählen. Das ist keine Zusicherung, dass der Titel dort existiert oder heruntergeladen werden kann. Bot-Prüfungen und Zugriffssperren werden nicht umgangen.
