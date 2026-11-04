@@ -32,3 +32,17 @@ YTDLP_PATH=/workspace/musloud-tools/bin/yt-dlp npm start
 ## Fehler auf Render untersuchen
 
 Die Oberfläche zeigt für Plattformfehler einen Code (z. B. `BOT_CHECK`, `SOURCE_FORBIDDEN`, `LOGIN_REQUIRED`, `EXTRACTOR_FAILED`). In den Render-Logs steht dazu ein JSON-Eintrag mit `event: media_failure`, Vorgang, Code, Request-ID und Revision; private Extractor-Ausgaben oder Media-URLs werden nicht protokolliert. `/api/health` zeigt die laufende Render-Commit-Revision. Bei einem Plattformfehler kann der Nutzer ausdrücklich eine neue Suche auf der anderen Plattform starten und dort einen Treffer auswählen. Das ist keine Zusicherung, dass der Titel dort existiert oder heruntergeladen werden kann. Bot-Prüfungen und Zugriffssperren werden nicht umgangen.
+
+## Auf dem eigenen Windows-PC ausführen
+
+Bei `BOT_CHECK` auf Render kann dieselbe Anwendung auf dem eigenen PC getestet werden. Damit laufen die Plattformabrufe über den Internetanschluss des PCs. Auch dort können Plattformen Zugriffe ablehnen; ein erfolgreicher Download ist nicht garantiert.
+
+1. Docker Desktop von https://www.docker.com/products/docker-desktop/ installieren und starten.
+2. Das Repository als ZIP herunterladen und vollständig entpacken.
+3. `START-WINDOWS.cmd` doppelklicken. Beim ersten Start werden das Image und alle benötigten Programme gebaut. Der Browser öffnet sich erst nach erfolgreichem Health Check.
+4. Musik auf der lokalen Website suchen und herunterladen. Docker Desktop muss dabei laufen.
+5. Zum Beenden `STOP-WINDOWS.cmd` öffnen.
+
+Der lokale Dienst ist ausschließlich auf diesem PC erreichbar. Die öffentliche Render-Website wird dadurch nicht mit dem PC verbunden; auf dem iPhone ist dieser lokale Dienst nicht erreichbar. Es werden keine Browser-Cookies kopiert und keine Zugriffs- oder TLS-Prüfungen abgeschaltet. Diese Windows-Startdateien wurden in der Linux-Entwicklungsumgebung erstellt; der erste tatsächliche Windows-Start und ein echter Plattformdownload müssen auf dem PC geprüft werden.
+
+Alternativ auf einem Computer mit Docker Compose: `docker compose -p musloud-local up --build --detach --wait`. Beenden: `docker compose -p musloud-local stop`.
