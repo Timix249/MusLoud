@@ -10,7 +10,7 @@ test('HTTP search, signed selection, real four-format conversion, and failures',
  const fixture=join(dir,'fixture.wav');
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=1',fixture]);
  const stub=join(dir,'downloader');
- await writeFile(stub,`#!${process.execPath}\nimport {copyFileSync,existsSync} from 'node:fs';\nconst args=process.argv.slice(2);\nif(existsSync(process.env.TEST_FAILURE_FILE)){console.error('ERROR: Sign in to confirm you are not a bot https://example.com/?token=never-expose');process.exit(1);}\nif(args.includes('--dump-single-json'))console.log(JSON.stringify({title:'Test track',uploader:'Fixture',duration:1,webpage_url:'https://www.youtube.com/watch?v=abcdefghijk'}));\nelse{const p=args[args.indexOf('--output')+1].replace('%(ext)s','wav');copyFileSync(process.env.TEST_AUDIO,p);}\n`,{mode:0o755});
+ await writeFile(stub,`#!${process.execPath}\nimport {copyFileSync,existsSync} from 'node:fs';\nconst args=process.argv.slice(2);\nif(existsSync(process.env.TEST_FAILURE_FILE)){console.error('ERROR: Sign in to confirm you are not a bot https://example.com/?token=never-expose');process.exit(1);}\nif(args.includes('--dump-single-json'))console.log(JSON.stringify({title:'Test track',uploader:'Fixture',duration:1,webpage_url:'https://soundcloud.com/fixture/track'}));\nelse{const p=args[args.indexOf('--output')+1].replace('%(ext)s','wav');copyFileSync(process.env.TEST_AUDIO,p);}\n`,{mode:0o755});
  // Standalone executable uses .mjs syntax through Node's module detection.
  const socket=createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));
  const server=spawn(process.execPath,['server.js'],{env:{...process.env,PORT:String(port),YTDLP_PATH:stub,TEST_AUDIO:fixture,TEST_FAILURE_FILE:join(dir,'fail')},stdio:['ignore','pipe','pipe']});
@@ -19,12 +19,14 @@ test('HTTP search, signed selection, real four-format conversion, and failures',
   await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',()=>reject(Error('Server exited')));});
   const base=`http://127.0.0.1:${port}`;
   assert.equal((await fetch(base+'/api/health')).status,200);
-  assert.match(await(await fetch(base)).text(),/SoundCloud/);
-  let r=await fetch(base+'/api/search?source=youtube&q=test');assert.equal(r.status,200);const {tracks}=await r.json();assert.equal(tracks.length,1);assert.equal(tracks[0].title,'Test track');
+  const page=await(await fetch(base)).text();assert.match(page,/SoundCloud/);assert.doesNotMatch(page,/YouTube/);
+  assert.equal((await fetch(base+'/api/search?source=youtube&q=test')).status,400);
+  assert.equal((await fetch(base+'/api/search?q=https://youtu.be/abcdefghijk')).status,400);
+  let r=await fetch(base+'/api/search?q=test');assert.equal(r.status,200);const {tracks}=await r.json();assert.equal(tracks.length,1);assert.equal(tracks[0].title,'Test track');
   const post=(body)=>fetch(base+'/api/download',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   assert.equal((await post({token:'forged',format:'mp3'})).status,400);
   assert.equal((await post({token:tracks[0].token,format:'__proto__'})).status,400);
-  assert.equal((await fetch(base+'/api/search?source=youtube&q=https://127.0.0.1/private')).status,400);
+  assert.equal((await fetch(base+'/api/search?q=https://127.0.0.1/private')).status,400);
   for(const [format,codec] of [['mp3','mp3'],['wav','pcm_s16le'],['flac','flac'],['ogg','vorbis']]){
    r=await post({token:tracks[0].token,format});assert.equal(r.status,200);
    assert.match(r.headers.get('content-disposition'),/attachment/);
@@ -33,7 +35,7 @@ test('HTTP search, signed selection, real four-format conversion, and failures',
   }
   await writeFile(join(dir,'fail'),'1');
   r=await post({token:tracks[0].token,format:'mp3'});assert.equal(r.status,502);
-  const failure=await r.json();assert.equal(failure.code,'BOT_CHECK');assert.equal(failure.canTryAlternative,true);assert.match(failure.requestId,/^[a-f0-9-]{36}$/);
+  const failure=await r.json();assert.equal(failure.code,'BOT_CHECK');assert.match(failure.requestId,/^[a-f0-9-]{36}$/);
   assert.doesNotMatch(JSON.stringify(failure),/never-expose/);
   await rm(join(dir,'fail'));
   await new Promise(resolve=>setImmediate(resolve));

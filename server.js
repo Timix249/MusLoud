@@ -44,7 +44,7 @@ app.post('/api/convert', conversionSlot, upload.single('audio'), async(req,res)=
 });
 app.get('/api/search', async(req,res)=>{
  let target;
- try {target=searchTarget(req.query.q,req.query.source||'youtube');}
+ try {target=searchTarget(req.query.q,req.query.source||'soundcloud');}
  catch(e){return res.status(400).json({error:e.message});}
  if(activeSearches>=2)return res.status(429).json({error:'Die Suche ist gerade ausgelastet. Bitte gleich erneut versuchen.'});
  activeSearches++;
@@ -56,7 +56,7 @@ app.get('/api/search', async(req,res)=>{
    try {
     const url=trackUrl(item.webpage_url||item.url);
     if(item.is_live||item.duration>1200)return [];
-    return [{title:String(item.title||'Unbekannter Track').slice(0,250),artist:String(item.uploader||item.channel||'').slice(0,150),duration:item.duration||null,source:url.includes('youtube.com')?'YouTube':'SoundCloud',url,token:issueToken(url)}];
+    return [{title:String(item.title||'Unbekannter Track').slice(0,250),artist:String(item.uploader||item.channel||'').slice(0,150),duration:item.duration||null,source:'SoundCloud',url,token:issueToken(url)}];
    }catch{return [];}
   });
   res.json({tracks});

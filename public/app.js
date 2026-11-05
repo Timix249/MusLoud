@@ -1,88 +1,140 @@
-let format='mp3',mode='search',source='youtube',selected=null,searchController=null;
+let format='mp3', mode='search', selected=null, searchController=null, prepared=null;
 const status=document.querySelector('#status');
 const download=document.querySelector('#download');
 const result=document.querySelector('#searchResult');
-const alternative=document.querySelector('#alternative');
-let alternativeQuery='',alternativeSource='soundcloud';
+const saveActions=document.querySelector('#saveActions');
+const saveFile=document.querySelector('#saveFile');
+const shareFile=document.querySelector('#shareFile');
+
+function clearPrepared(){
+  if(prepared) URL.revokeObjectURL(prepared.url);
+  prepared=null;
+  saveActions.hidden=true;
+  saveFile.removeAttribute('href');
+  shareFile.hidden=true;
+}
 async function apiError(response){
- let data;try{data=await response.json();}catch{return Error('Der Server antwortet nicht korrekt (HTTP '+response.status+'). Bitte später erneut versuchen.');}
- const error=Error((data.error||'Die Anfrage ist fehlgeschlagen.')+(data.code?' ['+data.code+']':''));
- error.canTryAlternative=Boolean(data.canTryAlternative);return error;
+  let data;
+  try {data=await response.json();}
+  catch {return Error('Der Server antwortet nicht korrekt (HTTP '+response.status+'). Bitte später erneut versuchen.');}
+  return Error((data.error||'Die Anfrage ist fehlgeschlagen.')+(data.code?' ['+data.code+']':''));
 }
-alternative.onclick=()=>{
- document.querySelector('.source[data-source="'+alternativeSource+'"]').click();
- document.querySelector('#query').value=alternativeQuery;
- document.querySelector('#searchForm').requestSubmit();
-};
 function setMode(next){
- mode=next;alternative.hidden=true;
- document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
- document.querySelector('#searchForm').hidden=mode!=='search';
- document.querySelector('#uploadForm').hidden=mode!=='upload';
- result.hidden=mode!=='search'||!result.childElementCount;
- download.textContent=mode==='upload'?'↓ DATEI KONVERTIEREN':'↓ TRACK HERUNTERLADEN';
- status.textContent=mode==='upload'?'Deine Datei wird nach der Konvertierung gelöscht.':selected?'Gewählt: '+selected.title:'Suche einen Song und wähle deinen Treffer aus.';
+  mode=next;
+  clearPrepared();
+  document.querySelectorAll('.tab').forEach(button=>{
+    const active=button.dataset.mode===mode;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
+  document.querySelector('#searchForm').hidden=mode!=='search';
+  document.querySelector('#uploadForm').hidden=mode!=='upload';
+  result.hidden=mode!=='search'||!result.childElementCount;
+  download.textContent=mode==='upload'?'↓ DATEI KONVERTIEREN':'↓ TRACK HERUNTERLADEN';
+  status.textContent=mode==='upload'?'Deine Datei wird nach der Konvertierung gelöscht.':selected?'Gewählt: '+selected.title:'Suche einen Song und wähle deinen Treffer aus.';
 }
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
-document.querySelectorAll('.source').forEach(b=>b.onclick=()=>{
- source=b.dataset.source;alternative.hidden=true;searchController?.abort();selected=null;result.replaceChildren();result.hidden=true;
- document.querySelectorAll('.source').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});
- status.textContent='Suche auf '+(source==='youtube'?'YouTube':'SoundCloud')+'.';
+document.querySelectorAll('.tab').forEach(button=>button.onclick=()=>setMode(button.dataset.mode));
+document.querySelectorAll('.format').forEach(button=>button.onclick=()=>{
+  clearPrepared();
+  format=button.dataset.format;
+  document.querySelectorAll('.format').forEach(other=>{
+    other.classList.toggle('selected',other===button);
+    other.setAttribute('aria-pressed',String(other===button));
+  });
 });
-document.querySelectorAll('.format').forEach(b=>{b.setAttribute('aria-pressed',String(b.classList.contains('selected')));b.onclick=()=>{
- format=b.dataset.format;document.querySelectorAll('.format').forEach(x=>{x.classList.toggle('selected',x===b);x.setAttribute('aria-pressed',String(x===b));});
-};});
-document.querySelector('#audio').onchange=e=>document.querySelector('#fileLabel').textContent=e.target.files[0]?.name||'Track hier auswählen';
+document.querySelector('#audio').onchange=event=>{
+  clearPrepared();
+  document.querySelector('#fileLabel').textContent=event.target.files[0]?.name||'Eigene Audiodatei auswählen';
+};
 function showTracks(tracks){
- result.replaceChildren();result.hidden=false;
- if(!tracks.length){result.textContent='Keine passenden Tracks gefunden. Versuche einen anderen Namen oder einen direkten Track-Link.';return;}
- const group=document.createElement('div');group.className='track-list';group.setAttribute('role','group');group.setAttribute('aria-label','Suchergebnisse');
- tracks.forEach(track=>{
-  const button=document.createElement('button');button.type='button';button.className='track';button.setAttribute('aria-pressed','false');
-  const icon=document.createElement('span');icon.className='track-icon';icon.textContent=track.source==='YouTube'?'▶':'☁';
-  const info=document.createElement('span');info.className='track-info';
-  const title=document.createElement('strong');title.textContent=track.title;
-  const detail=document.createElement('small');const seconds=Math.floor(track.duration||0);detail.textContent=[track.artist,track.source,seconds?Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):null].filter(Boolean).join(' · ');
-  info.append(title,detail);const check=document.createElement('span');check.className='track-check';check.textContent='○';button.append(icon,info,check);
-  button.onclick=()=>{
-   selected=track;group.querySelectorAll('.track').forEach(b=>{b.classList.toggle('chosen',b===button);b.setAttribute('aria-pressed',String(b===button));b.querySelector('.track-check').textContent=b===button?'●':'○';});
-   status.textContent='Gewählt: '+track.title+'. Wähle dein Format und lade den Track herunter.';
-  };group.append(button);
- });result.append(group);
+  result.replaceChildren();result.hidden=false;
+  if(!tracks.length){result.textContent='Keine passenden Tracks gefunden. Versuche einen anderen Namen oder einen direkten SoundCloud-Link.';return;}
+  const group=document.createElement('div');group.className='track-list';
+  group.setAttribute('role','group');group.setAttribute('aria-label','Suchergebnisse');
+  tracks.forEach(track=>{
+    const button=document.createElement('button');button.type='button';button.className='track';button.setAttribute('aria-pressed','false');
+    const icon=document.createElement('span');icon.className='track-icon';icon.textContent='☁';icon.setAttribute('aria-hidden','true');
+    const info=document.createElement('span');info.className='track-info';
+    const title=document.createElement('strong');title.textContent=track.title;
+    const detail=document.createElement('small');const seconds=Math.floor(track.duration||0);
+    detail.textContent=[track.artist,'SoundCloud',seconds?Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):null].filter(Boolean).join(' · ');
+    info.append(title,detail);
+    const check=document.createElement('span');check.className='track-check';check.textContent='○';check.setAttribute('aria-hidden','true');
+    button.append(icon,info,check);
+    button.onclick=()=>{
+      clearPrepared();selected=track;
+      group.querySelectorAll('.track').forEach(other=>{
+        other.classList.toggle('chosen',other===button);other.setAttribute('aria-pressed',String(other===button));
+        other.querySelector('.track-check').textContent=other===button?'●':'○';
+      });
+      status.textContent='Gewählt: '+track.title+'. Wähle dein Format und lade den Track herunter.';
+    };
+    group.append(button);
+  });
+  result.append(group);
 }
-document.querySelector('#searchForm').onsubmit=async e=>{
- e.preventDefault();alternative.hidden=true;const query=document.querySelector('#query').value.trim();if(!query)return;
- searchController?.abort();const controller=new AbortController();searchController=controller;
- const button=document.querySelector('.go');button.disabled=true;selected=null;result.replaceChildren();result.hidden=true;status.textContent='◌ Suche läuft …';
- try{
-  const response=await fetch('/api/search?'+new URLSearchParams({q:query,source}),{signal:controller.signal});if(!response.ok)throw await apiError(response);const data=await response.json();
-  showTracks(data.tracks);status.textContent=data.tracks.length?'Wähle einen Treffer aus.':'Keine Treffer gefunden.';
- }catch(e){if(e.name!=='AbortError')status.textContent=e.message||'Die Suche ist fehlgeschlagen.';}
- finally{if(searchController===controller){button.disabled=false;searchController=null;}}
+document.querySelector('#searchForm').onsubmit=async event=>{
+  event.preventDefault();
+  const query=document.querySelector('#query').value.trim();if(!query)return;
+  clearPrepared();searchController?.abort();
+  const controller=new AbortController();searchController=controller;
+  const button=document.querySelector('.go');button.disabled=true;selected=null;
+  result.replaceChildren();result.hidden=true;status.textContent='◌ Suche auf SoundCloud läuft …';
+  try{
+    const response=await fetch('/api/search?'+new URLSearchParams({q:query}),{signal:controller.signal});
+    if(!response.ok)throw await apiError(response);
+    const data=await response.json();
+    showTracks(data.tracks);status.textContent=data.tracks.length?'Wähle einen Treffer aus.':'Keine Treffer gefunden.';
+  }catch(error){if(error.name!=='AbortError')status.textContent=error.message||'Die Suche ist fehlgeschlagen.';}
+  finally{if(searchController===controller){button.disabled=false;searchController=null;}}
 };
+shareFile.onclick=async()=>{
+  if(!prepared?.file)return;
+  try {await navigator.share({files:[prepared.file]});}
+  catch(error){if(error.name!=='AbortError')status.textContent='Teilen ist nicht verfügbar. Tippe stattdessen auf „Datei speichern“.';}
+};
+saveFile.onclick=()=>{status.textContent='Falls sich die Datei öffnet: Im Teilen-Menü „In Dateien sichern“ wählen.';};
 download.onclick=async()=>{
- let body,headers={},endpoint,name;
- if(mode==='upload'){
-  const file=document.querySelector('#audio').files[0];if(!file){status.textContent='Bitte zuerst eine Audiodatei auswählen.';return;}
-  if(file.size>80*1024*1024){status.textContent='Die Datei darf maximal 80 MB groß sein.';return;}
-  body=new FormData();body.append('audio',file);body.append('format',format);endpoint='/api/convert';name=file.name.replace(/\.[^.]+$/,'');
- }else{
-  if(!selected){status.textContent='Bitte zuerst suchen und einen Track auswählen.';document.querySelector('#query').focus();return;}
-  body=JSON.stringify({token:selected.token,format});headers={'Content-Type':'application/json'};endpoint='/api/download';name=selected.title;
- }
- alternative.hidden=true;
- const failedSelection=selected;
- const outputFormat=format;download.disabled=true;download.textContent='◌ DOWNLOAD WIRD VORBEREITET …';status.textContent='Dein Track wird geladen und konvertiert. Das kann etwas dauern.';
- try{
-  const response=await fetch(endpoint,{method:'POST',headers,body});if(!response.ok)throw await apiError(response);
-  const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(name.replace(/[\\/:*?"<>|]/g,'').slice(0,100)||'MusLoud')+'.'+outputFormat;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);status.textContent='✓ Fertig! Dein Download wurde gestartet.';
- }catch(e){
-  status.textContent=e.message||'Download fehlgeschlagen. Bitte erneut versuchen.';
-  if(e.canTryAlternative&&endpoint==='/api/download'&&failedSelection){
-   alternativeQuery=[failedSelection.artist,failedSelection.title].filter(Boolean).join(' ');
-   alternativeSource=failedSelection.source==='YouTube'?'soundcloud':'youtube';
-   alternative.textContent='Auf '+(alternativeSource==='soundcloud'?'SoundCloud':'YouTube')+' suchen →';alternative.hidden=false;
+  let body,headers={},endpoint,name;
+  if(mode==='upload'){
+    const file=document.querySelector('#audio').files[0];
+    if(!file){status.textContent='Bitte zuerst eine Audiodatei auswählen.';return;}
+    if(file.size>80*1024*1024){status.textContent='Die Datei darf maximal 80 MB groß sein.';return;}
+    body=new FormData();body.append('audio',file);body.append('format',format);
+    endpoint='/api/convert';name=file.name.replace(/\.[^.]+$/,'');
+  }else{
+    if(!selected){status.textContent='Bitte zuerst suchen und einen Track auswählen.';document.querySelector('#query').focus();return;}
+    body=JSON.stringify({token:selected.token,format});headers={'Content-Type':'application/json'};
+    endpoint='/api/download';name=selected.title;
   }
- }
- finally{download.disabled=false;download.textContent=mode==='upload'?'↓ DATEI KONVERTIEREN':'↓ TRACK HERUNTERLADEN';}
+  clearPrepared();
+  const outputFormat=format;
+  download.disabled=true;download.textContent='◌ TRACK WIRD VORBEREITET …';
+  status.textContent='Dein Track wird geladen und konvertiert. Lass diese Seite kurz geöffnet.';
+  document.querySelector('#studio').setAttribute('aria-busy','true');
+  // Keep the selected mode and format stable until the prepared file is ready.
+  const controls=document.querySelectorAll('.tab,.format,.go,.track,#query,#audio');
+  controls.forEach(control=>control.disabled=true);
+  try{
+    const response=await fetch(endpoint,{method:'POST',headers,body});
+    if(!response.ok)throw await apiError(response);
+    const blob=await response.blob();
+    if(!blob.size)throw Error('Die heruntergeladene Datei ist leer. Bitte erneut versuchen.');
+    const filename=(name.replace(/[\\/:*?"<>|]/g,'').slice(0,100)||'MusLoud')+'.'+outputFormat;
+    const url=URL.createObjectURL(blob);
+    prepared={url,file:new File([blob],filename,{type:blob.type||'application/octet-stream'})};
+    saveFile.href=url;saveFile.download=filename;
+    document.querySelector('#saveName').textContent=filename;
+    saveActions.hidden=false;
+    shareFile.hidden=!(navigator.share&&navigator.canShare?.({files:[prepared.file]}));
+    status.textContent='✓ Fertig! Tippe auf „Datei speichern“.';
+    if(window.matchMedia('(pointer: fine)').matches)saveFile.click();
+    else saveActions.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(error){status.textContent=error.message||'Download fehlgeschlagen. Bitte erneut versuchen.';}
+  finally{
+    download.disabled=false;controls.forEach(control=>control.disabled=false);
+    download.textContent=mode==='upload'?'↓ DATEI KONVERTIEREN':'↓ TRACK HERUNTERLADEN';
+    document.querySelector('#studio').removeAttribute('aria-busy');
+  }
 };
+window.addEventListener('pagehide',clearPrepared);

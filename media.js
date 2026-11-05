@@ -6,20 +6,15 @@ export function trackUrl(value) {
   const u = new URL(value);
   if (u.protocol !== 'https:' || u.username || u.password || u.port) throw Error('Ungültiger Link.');
   const host = u.hostname;
-  if (['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be'].includes(host)) {
-    const id = host === 'youtu.be' ? u.pathname.slice(1) : u.pathname === '/watch' ? u.searchParams.get('v') : /^\/(?:shorts|embed)\/([\w-]{11})\/?$/.exec(u.pathname)?.[1];
-    if (!/^[\w-]{11}$/.test(id || '')) throw Error('Bitte einen einzelnen YouTube-Track verlinken.');
-    return `https://www.youtube.com/watch?v=${id}`;
-  }
   if (['soundcloud.com','www.soundcloud.com'].includes(host) && /^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/?$/.test(u.pathname) && !/^\/(sets|discover|search)\//.test(u.pathname)) return `https://soundcloud.com${u.pathname.replace(/\/$/,'')}`;
-  throw Error('Bitte einen YouTube- oder SoundCloud-Track verwenden. Playlists werden noch nicht unterstützt.');
+  throw Error('Bitte einen öffentlichen SoundCloud-Track verwenden. Playlists werden noch nicht unterstützt.');
 }
-export function searchTarget(query, source) {
+export function searchTarget(query, source='soundcloud') {
   if (typeof query !== 'string' || !query.trim() || query.length > 250) throw Error('Bitte einen Namen oder Track-Link eingeben (max. 250 Zeichen).');
-  if (!['youtube','soundcloud'].includes(source)) throw Error('Unbekannte Musikquelle.');
+  if (source !== 'soundcloud') throw Error('Unbekannte Musikquelle.');
   query = query.trim();
   if (/^[a-z][\w+.-]*:/i.test(query) || /^(www\.|\w+\.)[^ ]*\//.test(query)) return trackUrl(query);
-  return `${source === 'youtube' ? 'ytsearch5' : 'scsearch5'}:${query}`;
+  return `scsearch5:${query}`;
 }
 export function issueToken(url) {
   const data = Buffer.from(JSON.stringify({url:trackUrl(url),expires:Date.now()+30*60*1000})).toString('base64url');
@@ -47,22 +42,22 @@ export function run(command,args,{signal,timeout=60000}={}) {
   });
 }
 export function ytdlp(args, options) {
-  return run(process.env.YTDLP_PATH||'yt-dlp',['--ignore-config','--no-cache-dir','--no-playlist','--socket-timeout','12','--retries','1','--extractor-retries','1','--compat-options','no-certifi','--js-runtimes','node',...args],options);
+  return run(process.env.YTDLP_PATH||'yt-dlp',['--ignore-config','--no-cache-dir','--no-playlist','--socket-timeout','12','--retries','1','--extractor-retries','1','--compat-options','no-certifi',...args],options);
 }
 export function sourceFailure(error) {
   const details=error.details||'';
   let code='PROCESSING_FAILED',message=error.message||'Der Download ist fehlgeschlagen.';
   if(error.code==='ENOENT') {code='TOOL_MISSING';message='Ein benötigtes Programm fehlt auf dem Server. Bitte den Betreiber informieren.';}
   else if(/proxy|407|tunnel/i.test(details)){code='NETWORK_DENIED';message='Der Server kann diese Musikquelle derzeit nicht erreichen.';}
-  else if(/confirm.*(?:bot|human)|not a bot|automated requests/i.test(details)){code='BOT_CHECK';message='Die Plattform verlangt eine Bot-Prüfung und verweigert diesem Server den Download. Versuche die andere Musikquelle.';}
-  else if(/429|too many requests/i.test(details)){code='RATE_LIMITED';message='Die Plattform begrenzt gerade die Abrufe. Bitte später erneut versuchen oder die andere Musikquelle wählen.';}
+  else if(/confirm.*(?:bot|human)|not a bot|automated requests/i.test(details)){code='BOT_CHECK';message='Die Plattform verlangt eine Bot-Prüfung und verweigert diesem Server den Download. Versuche einen anderen SoundCloud-Track.';}
+  else if(/429|too many requests/i.test(details)){code='RATE_LIMITED';message='Die Plattform begrenzt gerade die Abrufe. Bitte später erneut versuchen.';}
   else if(/DRM protected|DRM-protected|protected with DRM/i.test(details)){code='DRM_PROTECTED';message='Dieser Inhalt ist geschützt und kann nicht heruntergeladen werden.';}
   else if(/private|members.only|sign in|login|age.restricted|authentication/i.test(details)){code='LOGIN_REQUIRED';message='Dieser Track erfordert eine Anmeldung oder ist nicht öffentlich verfügbar.';}
-  else if(/not available in your country|geo.restricted|not available in your region/i.test(details)){code='REGION_BLOCKED';message='Der Track ist am Serverstandort nicht verfügbar. Versuche die andere Musikquelle.';}
+  else if(/not available in your country|geo.restricted|not available in your region/i.test(details)){code='REGION_BLOCKED';message='Der Track ist am Serverstandort nicht verfügbar. Versuche einen anderen SoundCloud-Track.';}
   else if(/challenge solving failed|n challenge|signature extraction|no supported javascript runtime|nsig extraction/i.test(details)){code='EXTRACTOR_FAILED';message='Die Plattform konnte technisch nicht ausgelesen werden. Bitte den Betreiber informieren.';}
-  else if(/403|forbidden|access denied|blocked/i.test(details)){code='SOURCE_FORBIDDEN';message='Die Plattform verweigert dem Server den Download (HTTP 403). Versuche die andere Musikquelle.';}
+  else if(/403|forbidden|access denied|blocked/i.test(details)){code='SOURCE_FORBIDDEN';message='Die Plattform verweigert dem Server den Download (HTTP 403). Versuche einen anderen SoundCloud-Track.';}
   else if(/requested format is not available|no video formats|no formats found/i.test(details)){code='NO_AUDIO_FORMAT';message='Für diesen Track stellt die Plattform keine abrufbare Audiodatei bereit.';}
   else if(/unavailable|not available|removed|copyright|404/i.test(details)){code='TRACK_UNAVAILABLE';message='Dieser Track wurde entfernt oder ist nicht verfügbar.';}
-  return {code,error:message,canTryAlternative:['BOT_CHECK','RATE_LIMITED','REGION_BLOCKED','SOURCE_FORBIDDEN','NO_AUDIO_FORMAT','TRACK_UNAVAILABLE'].includes(code)};
+  return {code,error:message};
 }
 export function sourceError(error) {return sourceFailure(error).error;}
