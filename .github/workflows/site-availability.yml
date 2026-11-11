@@ -1,0 +1,44 @@
+name: Site availability
+
+on:
+  schedule:
+    # Every ten minutes, away from the busiest minute at the top of the hour.
+    - cron: '7,17,27,37,47,57 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/site-availability.yml'
+
+permissions: {}
+
+concurrency:
+  group: musloud-site-availability
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Wake and check MusLoud
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wait for the website and validate its status
+        shell: bash
+        run: |
+          set -euo pipefail
+          musloud_response_file=$(mktemp)
+          trap 'rm -f "$musloud_response_file"' EXIT
+          curl --fail --silent --show-error --location \
+            --connect-timeout 15 --max-time 90 \
+            --retry 2 --retry-delay 10 --retry-max-time 200 \
+            --output "$musloud_response_file" \
+            https://musload.onrender.com/api/health
+          python3 - "$musloud_response_file" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as response:
+              health = json.load(response)
+          if health.get("status") != "ok":
+              raise SystemExit("MusLoud did not report a healthy status")
+          print("MusLoud is awake and healthy. Revision:", health.get("revision", "unknown"))
+          PY

@@ -41,3 +41,9 @@ Die Oberfläche zeigt bei Plattformfehlern einen Code, etwa `RATE_LIMITED` oder 
 ## Pool-Design und Anhören
 
 Die Website verwendet einen lokal gespeicherten SVG-Poolhintergrund ohne Pflanzen und die selbst gehosteten Pixelschriften VT323 sowie Press Start 2P (Lizenzen unter `public/fonts`). Der Button „Musik im Web anhören“ ist nach Auswahl eines Tracks aktiv. Erst beim Anklicken wird der offizielle SoundCloud-Player geladen; es findet kein zusätzlicher serverseitiger Audio-Download für die Wiedergabe statt. SoundCloud kann die Wiedergabe einzelner Inhalte einschränken. Eigene Dateien werden über einen lokalen Blob-URL mit nativen Audiosteuerungen abgespielt. Player schließen, eine andere Auswahl oder der Wechsel zwischen Suche und Upload beendet die Wiedergabe.
+
+## Regelmäßige Erreichbarkeitsprüfung
+
+`.github/workflows/site-availability.yml` ruft den Health-Endpunkt der öffentlichen Render-Website alle zehn Minuten ab (Minuten 7, 17, 27, 37, 47 und 57 jeder Stunde). Die Prüfung wartet bei einem Kaltstart und kontrolliert die JSON-Antwort. Sie führt keine Musiksuche und keine Downloads aus. Der Workflow benötigt keine Secrets oder Repository-Berechtigungen und kann unter GitHub Actions manuell gestartet oder deaktiviert werden.
+
+Geplante GitHub-Actions-Läufe können verzögert werden oder ausfallen. Bei öffentlichen Repositories deaktiviert GitHub Zeitpläne nach 60 Tagen ohne Repository-Aktivität. Plattformlimits sowie Render-Ausfallzeiten oder ausgeschöpfte kostenlose Instanzstunden bleiben bestehen. Dauerhafte garantierte Verfügbarkeit erfordert einen geeigneten dauerhaft laufenden Hosting-Tarif. Auf privaten Repositories zählen die Läufe zum jeweiligen Actions-Kontingent; vor Aktivierung Kosten und Limits prüfen.
