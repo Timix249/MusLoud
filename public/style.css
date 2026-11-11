@@ -99,7 +99,7 @@ footer{max-width:1180px;margin:35px auto 0;border-top:1px solid #70538355;displa
 /* LATE NIGHT POOL CLUB */
 :root{--mint:#91f4ed;--pink:#f28bdd;--ink:#eee2ff}
 body{background:#121829;font-family:VT323,monospace;font-size:21px}
-.pool-scene{background:linear-gradient(180deg,#151629a6,#161a3240 48%,#14283c80),url('/assets/pool.svg') center/cover no-repeat #17182d}
+.pool-scene{background:linear-gradient(180deg,#151629a6,#161a3240 48%,#14283c80),url('/assets/vaporwave_backrooms1.jpg') center/cover no-repeat,url('/assets/pool.svg') center/cover no-repeat #17182d}
 .pool-light{position:absolute;inset:0;background:radial-gradient(ellipse at 12% 15%,#f15aff20,transparent 50%),radial-gradient(ellipse at 90% 90%,#00f4ff20,transparent 60%)}
 .scanlines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,#080d211c 3px 4px);opacity:.45}
 .brand{font-family:Pixel,monospace;font-size:22px;font-weight:400;letter-spacing:-1px;transform:none;text-shadow:3px 3px #603e7a}
