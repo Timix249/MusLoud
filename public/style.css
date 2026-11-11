@@ -149,3 +149,62 @@ footer{font-family:VT323,monospace;font-size:13px;color:#b3a5c7;background:#111a
  .track{font-size:20px}.track small{font-size:16px}.note{font-size:16px}footer{font-size:12px}
  .pool-scene{background-position:62% center}.steps{background:#172034b8;padding:20px 16px;margin:36px 0 22px;border:1px solid #6b588166}
 }
+
+/* WINDOWS 98 STUDIO WINDOW */
+.window{
+  background:#c0c0c0;color:#111;border:1px solid #dfdfdf;padding:3px;
+  box-shadow:inset 1px 1px #fff,inset -1px -1px #0a0a0a,inset -2px -2px #808080,5px 5px #0006;
+  backdrop-filter:none;
+}
+.window .titlebar{
+  background:linear-gradient(90deg,#000080,#1084d0);color:#fff;border:0;
+  padding:3px 4px 3px 7px;min-height:30px;font-size:18px;line-height:1.2;
+  align-items:center;font-weight:400;
+}
+.window .controls{display:flex;gap:3px;letter-spacing:0;color:#000;font-family:Arial,sans-serif;font-size:14px;font-weight:700;flex-shrink:0}
+.window .controls span{display:grid;place-items:center;width:20px;height:20px;background:#c0c0c0;line-height:1;box-shadow:inset 1px 1px #fff,inset -1px -1px #000,inset -2px -2px #808080}
+.window .windowbody{background:#c0c0c0;padding-top:20px}
+.window .tabs{gap:3px;align-items:flex-end;border:0;box-shadow:0 1px #fff;position:relative;margin-bottom:24px}
+.window .tab{background:#c0c0c0;color:#222;border:1px solid;border-color:#fff #808080 #808080 #fff;box-shadow:1px 0 #000;padding:10px 8px;min-height:48px;font-weight:400}
+.window .tab.active{position:relative;background:#c0c0c0;color:#000;border-bottom-color:#c0c0c0;box-shadow:1px 0 #000,0 2px #c0c0c0;min-height:52px}
+.window label,.window .formatheader>span:first-child{color:#111}
+.window .inputrow{background:#fff;border:0;box-shadow:inset 1px 1px #808080,inset 2px 2px #000,inset -1px -1px #fff,inset -2px -2px #dfdfdf;padding:2px}
+.window input:not([type=file]){color:#111;background:#fff}
+.window input::placeholder{color:#666}
+.window .inputrow>span{color:#000080}
+.window .hint,.window .formatheader>span:last-child,.window #status,.window .privacy{color:#444}
+.window .go,.window .format,.window .listen,.window .download,.window .save-file,.window #shareFile,.window #closePlayer{
+  border:0;border-radius:0;background:#c0c0c0;color:#111;
+  box-shadow:inset 1px 1px #fff,inset 2px 2px #dfdfdf,inset -1px -1px #000,inset -2px -2px #808080;
+  text-shadow:none;
+}
+.window .format,.window .format.selected{padding:16px 6px 14px}
+.window .go:hover:not(:disabled),.window .listen:hover:not(:disabled),.window .download:hover:not(:disabled),.window .save-file:hover,.window #shareFile:hover,.window #closePlayer:hover{background:#cacaca}
+.window .go:active:not(:disabled),.window .listen:active:not(:disabled),.window .download:active:not(:disabled),.window .save-file:active,.window #shareFile:active,.window #closePlayer:active{
+  box-shadow:inset 1px 1px #000,inset 2px 2px #808080,inset -1px -1px #fff;
+}
+.window .format.selected{background:#000080;color:#fff;box-shadow:inset 1px 1px #000,inset 2px 2px #808080,inset -1px -1px #fff}
+.window .format.selected:after,.window .format.selected span{color:#fff}
+.window .format span{color:#555}
+.window .download{outline:1px solid #000;outline-offset:1px}
+.window button:disabled{opacity:1;color:#808080;text-shadow:1px 1px #fff}
+.window .track{background:#fff;color:#111;border:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff}
+.window .track.chosen{background:#000080;color:#fff;outline:1px dotted #fff;outline-offset:-5px}
+.window .track small,.window .track-check{color:#555}
+.window .track.chosen small,.window .track.chosen .track-check{color:#fff}
+.window .drop{color:#111;background:#d7d7d7;border:1px dashed #808080}
+.window .drop input{color:#111}
+.window .listening-panel,.window .save-actions{background:#c0c0c0;border:0;box-shadow:inset 1px 1px #808080,inset -1px -1px #fff;padding:14px}
+.window .player-heading,.window #playingTitle,.window .player-hint,.window #saveName{color:#222}
+.window #soundcloudPlayer iframe{background:#fff}
+.window .privacy{border-top-color:#808080;box-shadow:0 -1px #fff}
+.window .statusbar{margin-top:3px;background:#c0c0c0;color:#333;border:0;padding:0;gap:3px}
+.window .statusbar span{padding:6px 8px;border:1px solid;border-color:#808080 #fff #fff #808080;flex:1}
+.window .statusbar span:last-child{text-align:right;flex:0 0 auto}
+.window button:focus-visible,.window a:focus-visible,.window input:focus-visible{outline:1px dotted #000;outline-offset:-5px}
+.window .track.chosen:focus-visible,.window .format.selected:focus-visible{outline-color:#fff}
+@media(max-width:600px){
+  .window .titlebar{font-size:16px;min-height:30px}.window .windowbody{padding:16px 12px}
+  .window .format,.window .format.selected{padding:12px 8px}
+  .window .statusbar{font-size:12px}
+}
