@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#241137">
+  <meta name="theme-color" content="#14192b">
   <meta name="description" content="MusLoud: SoundCloud-Musik finden und eigene Tracks in MP3, WAV, FLAC oder OGG konvertieren.">
   <title>MusLoud — Dein Sound. Dein Format.</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="scene" aria-hidden="true"><div class="sky"></div><div class="sun"></div><div class="mountains"></div><div class="grid"></div><div class="palm left">🌴</div><div class="palm right">🌴</div></div>
+<div class="scene pool-scene" aria-hidden="true"><div class="pool-light"></div><div class="scanlines"></div></div>
 <header>
   <a class="brand" href="/" aria-label="MusLoud Startseite">MUS<span>LOUD</span><small>音楽の楽園</small></a>
   <nav aria-label="Hauptnavigation"><a href="#studio">Studio</a><a href="#how">So geht’s</a><span class="online">● SYSTEM ONLINE</span></nav>
 </header>
 <main>
-  <div class="eyebrow">✦ YOUR PERSONAL SOUND PARADISE ✦</div>
-  <h1>Dein Sound.<br><em>Dein Format.</em></h1>
-  <p class="intro">Finde deinen Sound auf SoundCloud.<br>Format wählen. Herunterladen. Laut sein.</p>
+  <div class="eyebrow">✦ POOLSIDE RADIO · OPEN ALL NIGHT ✦</div>
+  <h1>Dein Sound.<br><em>Deine Auszeit.</em></h1>
+  <p class="intro">Finde deinen Sound auf SoundCloud.<br>Anhören. Format wählen. Mitnehmen.</p>
   <section class="window" id="studio" aria-label="Musikstudio">
     <div class="titlebar"><span>▣ musloud.exe</span><span class="controls" aria-hidden="true">— □ ×</span></div>
     <div class="windowbody">
@@ -34,6 +34,14 @@
       <form id="uploadForm" hidden>
         <label class="drop" for="audio"><strong aria-hidden="true">＋</strong><span id="fileLabel">Eigene Audiodatei auswählen</span><small>MP3, WAV, FLAC, OGG & mehr · max. 80 MB</small><input id="audio" type="file" accept="audio/*" required></label>
       </form>
+      <button type="button" id="listen" class="listen" disabled aria-controls="listeningPanel" aria-expanded="false">▶ MUSIK IM WEB ANHÖREN</button>
+      <div id="listeningPanel" class="listening-panel" hidden>
+        <div class="player-heading"><span>NOW PLAYING</span><button type="button" id="closePlayer" aria-label="Player schließen">×</button></div>
+        <p id="playingTitle"></p>
+        <div id="soundcloudPlayer"></div>
+        <audio id="localPlayer" controls preload="metadata" hidden></audio>
+        <p class="player-hint">SoundCloud-Player: Zum Starten auf Play tippen. Dabei wird eine Verbindung zu SoundCloud hergestellt.</p>
+      </div>
       <div class="formatheader"><span id="formatLabel">WÄHLE DEIN FORMAT</span><span>YOUR SOUND, YOUR RULES</span></div>
       <div class="formats" role="group" aria-labelledby="formatLabel">
         <button type="button" class="format selected" data-format="mp3" aria-pressed="true"><b>MP3</b><small>Der Klassiker</small><span>320 kbps</span></button>
@@ -52,7 +60,7 @@
     </div>
     <div class="statusbar"><span>READY TO VIBE_</span><span>VOL. 100% ▥</span></div>
   </section>
-  <div class="sticker" aria-hidden="true">HIGH QUALITY<br><b>GOOD VIBES</b><span>ONLY ✦</span></div>
+  <div class="sticker" aria-hidden="true">LATE NIGHT<br><b>POOL CLUB</b><span>EST. 1996</span></div>
   <section class="steps" id="how" aria-label="So funktioniert MusLoud">
     <article><span>01 / INPUT</span><h2>Bring deinen Sound.</h2><p>Finde Tracks auf SoundCloud oder lade eigene Musik hoch.</p></article>
     <article><span>02 / SELECT</span><h2>Wähle dein Format.</h2><p>Von kompaktem MP3 bis zu verlustfreiem FLAC. Du entscheidest.</p></article>

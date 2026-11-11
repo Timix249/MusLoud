@@ -37,3 +37,7 @@ Optional für einen lokalen Windows-PC mit gestartetem Docker Desktop: ZIP entpa
 `npm test` prüft SoundCloud-URL-Validierung, Ablehnung anderer Quellen, signierte Auswahlen, Fehlertexte und den HTTP-Ablauf. Der Integrationstest ersetzt ausschließlich den externen Downloader durch eine lokale Fixture; FFmpeg verarbeitet echte Audiodaten und alle vier Ausgabe-Codecs werden mit ffprobe geprüft. Externe Plattformabrufe müssen zusätzlich auf dem Zielserver geprüft werden.
 
 Die Oberfläche zeigt bei Plattformfehlern einen Code, etwa `RATE_LIMITED` oder `SOURCE_FORBIDDEN`. In den Render-Logs steht ein JSON-Eintrag mit `event: media_failure`, Vorgang, Code, Request-ID und Revision. Private Extractor-Ausgaben oder Media-URLs werden nicht protokolliert. Zugriffssperren werden nicht umgangen.
+
+## Pool-Design und Anhören
+
+Die Website verwendet einen lokal gespeicherten SVG-Poolhintergrund ohne Pflanzen und die selbst gehosteten Pixelschriften VT323 sowie Press Start 2P (Lizenzen unter `public/fonts`). Der Button „Musik im Web anhören“ ist nach Auswahl eines Tracks aktiv. Erst beim Anklicken wird der offizielle SoundCloud-Player geladen; es findet kein zusätzlicher serverseitiger Audio-Download für die Wiedergabe statt. SoundCloud kann die Wiedergabe einzelner Inhalte einschränken. Eigene Dateien werden über einen lokalen Blob-URL mit nativen Audiosteuerungen abgespielt. Player schließen, eine andere Auswahl oder der Wechsel zwischen Suche und Upload beendet die Wiedergabe.

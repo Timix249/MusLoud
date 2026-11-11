@@ -5,6 +5,40 @@ const result=document.querySelector('#searchResult');
 const saveActions=document.querySelector('#saveActions');
 const saveFile=document.querySelector('#saveFile');
 const shareFile=document.querySelector('#shareFile');
+const listen=document.querySelector('#listen');
+const listeningPanel=document.querySelector('#listeningPanel');
+const localPlayer=document.querySelector('#localPlayer');
+let listeningUrl=null;
+localPlayer.onerror=()=>{if(localPlayer.getAttribute('src'))status.textContent='Dein Browser kann diese Datei nicht abspielen. Konvertiere sie zuerst in MP3.';};
+function stopListening(){
+  localPlayer.pause();localPlayer.removeAttribute('src');localPlayer.load();localPlayer.hidden=true;
+  document.querySelector('#soundcloudPlayer').replaceChildren();
+  if(listeningUrl)URL.revokeObjectURL(listeningUrl);
+  listeningUrl=null;listeningPanel.hidden=true;listen.setAttribute('aria-expanded','false');
+}
+document.querySelector('#closePlayer').onclick=stopListening;
+listen.onclick=()=>{
+  stopListening();
+  if(mode==='search'){
+    if(!selected)return;
+    const url=new URL(selected.url);
+    if(url.protocol!=='https:'||url.hostname!=='soundcloud.com'){status.textContent='Dieser Track kann nicht eingebettet werden.';return;}
+    const iframe=document.createElement('iframe');
+    iframe.title='SoundCloud: '+selected.title;
+    iframe.src='https://w.soundcloud.com/player/?'+new URLSearchParams({url:url.href,auto_play:'false',hide_related:'true',show_comments:'false',show_user:'true',show_reposts:'false',visual:'false',color:'#ca74f5'});
+    iframe.allow='autoplay';iframe.height='166';iframe.referrerPolicy='strict-origin-when-cross-origin';
+    document.querySelector('#soundcloudPlayer').append(iframe);
+    document.querySelector('#playingTitle').textContent=selected.title;
+    document.querySelector('.player-hint').hidden=false;
+  }else{
+    const file=document.querySelector('#audio').files[0];if(!file)return;
+    listeningUrl=URL.createObjectURL(file);localPlayer.src=listeningUrl;localPlayer.hidden=false;
+    document.querySelector('#playingTitle').textContent=file.name;
+    document.querySelector('.player-hint').hidden=true;
+  }
+  listeningPanel.hidden=false;listen.setAttribute('aria-expanded','true');
+  listeningPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+};
 
 function clearPrepared(){
   if(prepared) URL.revokeObjectURL(prepared.url);
@@ -21,6 +55,8 @@ async function apiError(response){
 }
 function setMode(next){
   mode=next;
+  stopListening();
+  listen.disabled=mode==='search'?!selected:!document.querySelector('#audio').files[0];
   clearPrepared();
   document.querySelectorAll('.tab').forEach(button=>{
     const active=button.dataset.mode===mode;
@@ -43,6 +79,7 @@ document.querySelectorAll('.format').forEach(button=>button.onclick=()=>{
   });
 });
 document.querySelector('#audio').onchange=event=>{
+  stopListening();listen.disabled=!event.target.files[0];
   clearPrepared();
   document.querySelector('#fileLabel').textContent=event.target.files[0]?.name||'Eigene Audiodatei auswählen';
 };
@@ -62,6 +99,7 @@ function showTracks(tracks){
     const check=document.createElement('span');check.className='track-check';check.textContent='○';check.setAttribute('aria-hidden','true');
     button.append(icon,info,check);
     button.onclick=()=>{
+      stopListening();listen.disabled=false;
       clearPrepared();selected=track;
       group.querySelectorAll('.track').forEach(other=>{
         other.classList.toggle('chosen',other===button);other.setAttribute('aria-pressed',String(other===button));
@@ -76,6 +114,7 @@ function showTracks(tracks){
 document.querySelector('#searchForm').onsubmit=async event=>{
   event.preventDefault();
   const query=document.querySelector('#query').value.trim();if(!query)return;
+  stopListening();listen.disabled=true;
   clearPrepared();searchController?.abort();
   const controller=new AbortController();searchController=controller;
   const button=document.querySelector('.go');button.disabled=true;selected=null;
@@ -137,4 +176,4 @@ download.onclick=async()=>{
     document.querySelector('#studio').removeAttribute('aria-busy');
   }
 };
-window.addEventListener('pagehide',clearPrepared);
+window.addEventListener('pagehide',()=>{clearPrepared();stopListening();});
